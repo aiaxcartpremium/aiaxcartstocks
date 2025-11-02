@@ -8,7 +8,7 @@ import {
   PRODUCT_OPTIONS,
   type ProductCategory
 } from '../../lib/catalog';
-
+import LogoutButton from '../../components/LogoutButton';
 type Role = 'owner' | 'admin' | 'user' | null;
 
 type Profile = { id: string; email?: string; role: Role };
