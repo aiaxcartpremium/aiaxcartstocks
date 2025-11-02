@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '../../lib/supabaseClient';
+import supabase from '../../lib/supabaseClient';
 import { CATALOG } from '../../lib/catalog';
 type Role = "owner" | "admin";
 type Account = {
