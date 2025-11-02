@@ -2,117 +2,169 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import supabase from '../../lib/supabaseClient';
-import { PRODUCT_OPTIONS, PRODUCT_CATEGORIES } from '../../lib/catalog';
-
-type Role = 'owner' | 'admin';
-
-type Account = {
-  id: number;
-  product: string;
-  status: 'available' | 'sold';
-  price?: number | null;
-  buyer?: string | null;
-  // add other columns your table has
-};
+import { createClient } from '@/lib/supabaseClient';
+import type { Stock, Category } from '@/lib/types';
+import { PRODUCT_CATEGORIES } from '@/lib/catalog';
+import LogoutButton from '@/components/LogoutButton';
 
 export default function AdminPage() {
   const router = useRouter();
-  const [uid, setUid] = useState<string | null>(null);
-  const [role, setRole] = useState<Role | null>(null);
-  const [rows, setRows] = useState<Account[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [err, setErr] = useState<string | null>(null);
+  const supabase = createClient();
 
-  // 1) Auth guard + get role (expects table "profiles" with columns: id (uuid), role)
+  const [role, setRole] = useState<'owner' | 'admin' | null>(null);
+  const [rows, setRows] = useState<Stock[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [category, setCategory] = useState<Category | 'all'>('all');
+  const [status, setStatus] = useState<'available' | 'reserved' | 'sold' | 'all'>('all');
+
+  // load role + initial data
   useEffect(() => {
     (async () => {
-      const { data: sess } = await supabase.auth.getSession();
-      const user = sess?.session?.user;
-      if (!user) {
-        router.replace('/login');
-        return;
-      }
-      setUid(user.id);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return router.replace('/login');
 
-      const { data: prof, error: roleErr } = await supabase
+      const { data: prof } = await supabase
         .from('profiles')
         .select('role')
         .eq('id', user.id)
         .single();
 
-      if (roleErr) {
-        setErr(roleErr.message);
-      } else {
-        setRole(prof?.role as Role);
+      if (!prof || !['owner','admin'].includes(prof.role)) {
+        return router.replace('/login');
       }
-    })();
-  }, [router]);
+      setRole(prof.role);
 
-  // 2) Load stocks (expects table "account_records")
+      await fetchRows();
+    })().finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function fetchRows() {
+    let q = supabase.from('stocks').select('*').order('created_at', { ascending: false });
+
+    if (category !== 'all') q = q.eq('category', category);
+    if (status !== 'all')   q = q.eq('status', status);
+
+    const { data } = await q;
+    setRows((data || []) as Stock[]);
+  }
+
   useEffect(() => {
-    (async () => {
-      if (!uid) return;
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('account_records')
-        .select('*')
-        .order('id', { ascending: false });
+    if (!loading) fetchRows();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [category, status]);
 
-      if (error) setErr(error.message);
-      else setRows((data ?? []) as Account[]);
-      setLoading(false);
-    })();
-  }, [uid]);
+  async function onMarkSold(s: Stock) {
+    const buyer = window.prompt('Buyer email (optional):', s.buyer_email ?? '') || null;
+    const priceStr = window.prompt('Final price:', s.price ? String(s.price) : '');
+    if (!priceStr) return;
+    const price = Number(priceStr);
+    if (Number.isNaN(price)) {
+      alert('Invalid price');
+      return;
+    }
+    const { error } = await supabase.rpc('mark_sold', {
+      p_stock_id: s.id,
+      p_buyer_email: buyer,
+      p_price: price,
+    });
+    if (error) {
+      alert(error.message);
+    } else {
+      await fetchRows();
+    }
+  }
 
-  const totalAvailable = useMemo(
-    () => rows.filter(r => r.status === 'available').length,
-    [rows]
-  );
-
-  if (loading) return <div className="p-6">Loading…</div>;
-  if (err) return <div className="p-6 text-red-500">Error: {err}</div>;
+  const total = rows.length;
+  const available = useMemo(() => rows.filter(r => r.status === 'available').length, [rows]);
 
   return (
-    <main className="p-6 space-y-6">
-      <header className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Admin • Stocks</h1>
-        <div className="text-sm opacity-75">
-          {role ? `Signed in as ${role}` : 'Signed in'}
-        </div>
+    <div className="max-w-6xl mx-auto py-6">
+      <header className="flex items-center justify-between mb-6">
+        <h1 className="text-3xl font-extrabold">
+          {role ? (role === 'owner' ? 'Owner' : 'Admin') : 'Admin'} • Stocks
+        </h1>
+        <LogoutButton />
       </header>
 
-      {/* quick summary */}
-      <section className="text-sm grid grid-cols-2 gap-3">
-        <div className="rounded border p-3">Total rows: {rows.length}</div>
-        <div className="rounded border p-3">Available: {totalAvailable}</div>
-      </section>
+      <p className="mb-4 text-sm">Signed in as {role ?? '...'}</p>
+      <p className="mb-6 text-sm">Total rows: {total} • Available: {available}</p>
 
-      {/* simple table */}
-      <section className="overflow-x-auto">
-        <table className="min-w-[640px] w-full border text-sm">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="p-2 border">ID</th>
-              <th className="p-2 border">Product</th>
-              <th className="p-2 border">Status</th>
-              <th className="p-2 border">Price</th>
-              <th className="p-2 border">Buyer</th>
+      <div className="flex flex-wrap gap-2 mb-4">
+        <select
+          className="border rounded px-2 py-1 text-sm"
+          value={category}
+          onChange={(e) => setCategory(e.target.value as any)}
+        >
+          <option value="all">All categories</option>
+          {PRODUCT_CATEGORIES.map(c => (
+            <option key={c.key} value={c.key}>{c.label}</option>
+          ))}
+        </select>
+
+        <select
+          className="border rounded px-2 py-1 text-sm"
+          value={status}
+          onChange={(e) => setStatus(e.target.value as any)}
+        >
+          <option value="all">All status</option>
+          <option value="available">Available</option>
+          <option value="reserved">Reserved</option>
+          <option value="sold">Sold</option>
+        </select>
+
+        <button
+          onClick={fetchRows}
+          className="ml-auto border rounded px-3 py-1.5 text-sm hover:bg-neutral-100"
+        >
+          Refresh
+        </button>
+      </div>
+
+      <div className="overflow-x-auto border rounded">
+        <table className="min-w-[720px] w-full text-sm">
+          <thead>
+            <tr className="bg-neutral-50">
+              <th className="text-left p-2">ID</th>
+              <th className="text-left p-2">Product</th>
+              <th className="text-left p-2">Category</th>
+              <th className="text-left p-2">Status</th>
+              <th className="text-left p-2">Price</th>
+              <th className="text-left p-2">Buyer</th>
+              <th className="text-left p-2"></th>
             </tr>
           </thead>
           <tbody>
-            {rows.map(r => (
-              <tr key={r.id}>
-                <td className="p-2 border">{r.id}</td>
-                <td className="p-2 border">{r.product}</td>
-                <td className="p-2 border">{r.status}</td>
-                <td className="p-2 border">{r.price ?? ''}</td>
-                <td className="p-2 border">{r.buyer ?? ''}</td>
+            {rows.map((r) => (
+              <tr key={r.id} className="border-t">
+                <td className="p-2">{r.id.slice(0,8)}</td>
+                <td className="p-2">{r.product}</td>
+                <td className="p-2 capitalize">{r.category}</td>
+                <td className="p-2">{r.status}</td>
+                <td className="p-2">{r.price ?? '—'}</td>
+                <td className="p-2">{r.buyer_email ?? '—'}</td>
+                <td className="p-2">
+                  {r.status !== 'sold' && (
+                    <button
+                      onClick={() => onMarkSold(r)}
+                      className="border rounded px-2 py-1 hover:bg-neutral-100"
+                    >
+                      Mark as sold
+                    </button>
+                  )}
+                </td>
               </tr>
             ))}
+            {rows.length === 0 && (
+              <tr>
+                <td className="p-4 text-center text-neutral-500" colSpan={7}>
+                  No rows
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
-      </section>
-    </main>
+      </div>
+    </div>
   );
 }
