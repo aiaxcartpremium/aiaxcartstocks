@@ -2,14 +2,15 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabaseClient';
-import type { Stock, Category } from '@/lib/types';
-import { PRODUCT_CATEGORIES } from '@/lib/catalog';
+
+// ✅ use the singleton and relative paths
+import { supabase } from '../../lib/supabaseClient';
+import type { Stock, Category } from '../../lib/types';
+import { PRODUCT_CATEGORIES } from '../../lib/catalog';
 import LogoutButton from '../../components/LogoutButton';
 
 export default function AdminPage() {
   const router = useRouter();
-  const supabase = createClient();
 
   const [role, setRole] = useState<'owner' | 'admin' | null>(null);
   const [rows, setRows] = useState<Stock[]>([]);
@@ -21,7 +22,7 @@ export default function AdminPage() {
   useEffect(() => {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return router.replace('/login');
+      if (!user) { router.replace('/login'); return; }
 
       const { data: prof } = await supabase
         .from('profiles')
@@ -29,23 +30,30 @@ export default function AdminPage() {
         .eq('id', user.id)
         .single();
 
-      if (!prof || !['owner','admin'].includes(prof.role)) {
-        return router.replace('/login');
+      if (!prof || !['owner', 'admin'].includes(prof.role)) {
+        router.replace('/login');
+        return;
       }
       setRole(prof.role);
-
       await fetchRows();
     })().finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function fetchRows() {
-    let q = supabase.from('stocks').select('*').order('created_at', { ascending: false });
+    let q = supabase
+      .from('stocks')
+      .select('*')
+      .order('created_at', { ascending: false });
 
     if (category !== 'all') q = q.eq('category', category);
-    if (status !== 'all')   q = q.eq('status', status);
+    if (status !== 'all') q = q.eq('status', status);
 
-    const { data } = await q;
+    const { data, error } = await q;
+    if (error) {
+      console.error(error);
+      return;
+    }
     setRows((data || []) as Stock[]);
   }
 
@@ -58,16 +66,17 @@ export default function AdminPage() {
     const buyer = window.prompt('Buyer email (optional):', s.buyer_email ?? '') || null;
     const priceStr = window.prompt('Final price:', s.price ? String(s.price) : '');
     if (!priceStr) return;
+
     const price = Number(priceStr);
-    if (Number.isNaN(price)) {
-      alert('Invalid price');
-      return;
-    }
+    if (Number.isNaN(price)) { alert('Invalid price'); return; }
+
+    // ⚠️ param names must match your SQL function definition
     const { error } = await supabase.rpc('mark_sold', {
       p_stock_id: s.id,
       p_buyer_email: buyer,
       p_price: price,
     });
+
     if (error) {
       alert(error.message);
     } else {
@@ -76,7 +85,10 @@ export default function AdminPage() {
   }
 
   const total = rows.length;
-  const available = useMemo(() => rows.filter(r => r.status === 'available').length, [rows]);
+  const available = useMemo(
+    () => rows.filter(r => r.status === 'available').length,
+    [rows]
+  );
 
   return (
     <div className="max-w-6xl mx-auto py-6">
@@ -87,7 +99,7 @@ export default function AdminPage() {
         <LogoutButton />
       </header>
 
-      <p className="mb-4 text-sm">Signed in as {role ?? '...'}</p>
+      <p className="mb-2 text-sm">Signed in as {role ?? '...'}</p>
       <p className="mb-6 text-sm">Total rows: {total} • Available: {available}</p>
 
       <div className="flex flex-wrap gap-2 mb-4">
@@ -137,7 +149,7 @@ export default function AdminPage() {
           <tbody>
             {rows.map((r) => (
               <tr key={r.id} className="border-t">
-                <td className="p-2">{r.id.slice(0,8)}</td>
+                <td className="p-2">{r.id.slice(0, 8)}</td>
                 <td className="p-2">{r.product}</td>
                 <td className="p-2 capitalize">{r.category}</td>
                 <td className="p-2">{r.status}</td>
