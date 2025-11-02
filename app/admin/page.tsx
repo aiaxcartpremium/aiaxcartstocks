@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import supabase from '../../lib/supabaseClient';
+import { createClient } from '../../lib/supabaseClient';
 import { PRODUCT_OPTIONS, PRODUCT_CATEGORIES } from '../../lib/catalog';
 type Role = "owner" | "admin";
 type Account = {
@@ -25,7 +25,8 @@ type RecordRow = {
 };
 
 export default function AdminPage() {
-  const supabase = createClientComponentClient();
+  
+const supabase = createClient();
 
   // session + role
   const [uid, setUid] = useState<string | null>(null);
