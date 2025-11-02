@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createClient } from '../../lib/supabaseClient'
 import { PRODUCT_OPTIONS } from "@/lib/catalog";
 
 type Role = "owner" | "admin";
