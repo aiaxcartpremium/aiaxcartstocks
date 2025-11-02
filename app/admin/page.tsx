@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import supabase from '../../lib/supabaseClient';
-import { PRODUCT_OPTIONS } from '../../lib/catalog';
+import { PRODUCT_OPTIONS, PRODUCT_CATEGORIES } from '../../lib/catalog';
 type Role = "owner" | "admin";
 type Account = {
   id: number;
@@ -338,18 +338,24 @@ export default function AdminPage() {
         <Modal title={editing ? "Edit Account" : "Add Account"} onClose={() => setShowEdit(false)}>
           <div className="grid gap-2">
             {/* Product dropdown */}
-            <select
-              className="border p-2 rounded"
-              value={form.product}
-              onChange={(e) => setForm({ ...form, product: e.target.value })}
-            >
-              <option value="">Select product…</option>
-              {PRODUCT_OPTIONS.map((opt) => (
-                <option key={opt} value={opt}>
-                  {opt}
-                </option>
-              ))}
-            </select>
+            {/* Product grouped dropdown */}
+<select
+  className="border p-2 rounded"
+  value={form.product}
+  onChange={(e) => setForm({ ...form, product: e.target.value })}
+>
+  <option value="">Select product…</option>
+
+  {Object.entries(PRODUCT_CATEGORIES).map(([label, items]) => (
+    <optgroup key={label} label={label}>
+      {items.map((opt) => (
+        <option key={opt} value={opt}>
+          {opt}
+        </option>
+      ))}
+    </optgroup>
+  ))}
+</select>
 
             <input
               className="border p-2 rounded"
