@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabaseClient';
 import type { Stock, Category } from '@/lib/types';
 import { PRODUCT_CATEGORIES } from '@/lib/catalog';
-import LogoutButton from '@/components/LogoutButton';
+import LogoutButton from '../../components/LogoutButton';
 
 export default function AdminPage() {
   const router = useRouter();
