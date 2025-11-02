@@ -1,21 +1,21 @@
 {
-  "name": "stock-management-backend",
+  "name": "stock-system",
   "version": "1.0.0",
-  "description": "Backend for stock management system",
-  "main": "index.js",
+  "private": true,
   "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js"
+    "dev": "next dev -p 3000",
+    "build": "next build",
+    "start": "next start -p 3000",
+    "lint": "echo \"skip\""
   },
   "dependencies": {
-    "express": "^4.18.2",
-    "bcryptjs": "^2.4.3",
-    "jsonwebtoken": "^9.0.2",
-    "cors": "^2.8.5",
-    "dotenv": "^16.3.1",
-    "mysql2": "^3.6.0"
+    "@supabase/auth-helpers-nextjs": "0.10.7",
+    "@supabase/supabase-js": "2.45.4",
+    "next": "14.2.13",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
   },
   "devDependencies": {
-    "nodemon": "^3.0.1"
+    "typescript": "5.6.3"
   }
 }
