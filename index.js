@@ -11,7 +11,15 @@ const PORT = process.env.PORT || 3000;
 // Middleware
 app.use(cors());
 app.use(express.json());
-
+// For Supabase connection - CORRECT VERSION
+const dbConfig = {
+    host: process.env.DB_HOST || 'tjwxdjaybeoekefougzt.supabase.co', // WALANG 'db.' at WALANG 'https://'
+    user: process.env.DB_USER || 'postgres',
+    password: process.env.DB_PASSWORD || 'Smfmariano09',
+    database: process.env.DB_NAME || 'postgres',
+    port: 5432,
+    ssl: { rejectUnauthorized: false } // Lagyan mo na lang palagi para safe
+};
 // Database connection
 const dbConfig = {
     host: process.env.DB_HOST || 'localhost',
