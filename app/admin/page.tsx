@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { createClient } from '../../lib/supabaseClient'
-import { CATALOG } from '../../lib/catalog'
-import { PRODUCT_OPTIONS } from "@/lib/catalog";
-
+import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { createClient } from '../../lib/supabaseClient';
+import { CATALOG } from '../../lib/catalog';
 type Role = "owner" | "admin";
 type Account = {
   id: number;
