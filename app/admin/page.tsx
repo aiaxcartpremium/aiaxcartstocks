@@ -1,225 +1,217 @@
-'use client';
-import { supabase } from '@/lib/supabaseClient';
-import { useEffect, useMemo, useState } from 'react';
-import type { Database } from '@/lib/types';
-import { CATALOG, expandTenureChoices } from '@/lib/catalog';
+"use client";
 
-type Account = Database['public']['Tables']['accounts']['Row'];
-type RecordRow = Database['public']['Tables']['account_records']['Row'];
+import { useEffect, useState } from "react";
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 
-const productLabel = (key:string) => {
-  for (const c of CATALOG) for (const p of c.products) if (p.key===key) return p.label;
-  return key;
-};
-
-export default function AdminPage(){
-  const [me, setMe] = useState<{id:string; name?:string}|null>(null);
-  const [rows, setRows] = useState<Account[]>([]);
+export default function AdminPage() {
+  const supabase = createClientComponentClient();
+  const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [form, setForm] = useState({
+    product: "",
+    plan_type: "",
+    duration_months: 1,
+    price: "",
+    status: "available",
+  });
 
-  // Sell modal
-  const [sellModal, setSellModal] = useState<{open:boolean; account:Account|null}>({open:false, account:null});
-
-  async function load(){
-    const { data: { user } } = await supabase.auth.getUser();
-    setMe(user ? { id: user.id, name: user.email ?? '' } : null);
-    const { data } = await supabase.from('accounts').select('*').in('status', ['available']).order('id', {ascending:false});
-    setRows(data || []);
+  async function fetchAccounts() {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("accounts")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (error) console.error(error);
+    else setAccounts(data);
+    setLoading(false);
   }
-  useEffect(()=>{ load(); }, []);
 
-  function openSell(a:Account){ setSellModal({open:true, account:a}); }
-  function closeSell(){ setSellModal({open:false, account:null}); }
-
-  return (
-    <div>
-      <h2>Available Stock (Admin)</h2>
-      <table>
-        <thead>
-          <tr><th>ID</th><th>Service</th><th>Account</th><th>Capital</th><th>Price</th><th></th></tr>
-        </thead>
-        <tbody>
-          {rows.map(r=>(
-            <tr key={r.id}>
-              <td>{r.id}</td>
-              <td>{productLabel(r.service)}</td>
-              <td>
-                <div><b>{r.email}</b> / {r.password}</div>
-                <div style={{fontSize:12, color:'#666'}}>Profile: {r.profile || '—'} | PIN: {r.pin || '—'}</div>
-              </td>
-              <td>₱{Number(r.capital).toFixed(2)}</td>
-              <td><b>₱{Number(r.price).toFixed(2)}</b></td>
-              <td><button disabled={loading} onClick={()=>openSell(r)}>Sell</button></td>
-            </tr>
-          ))}
-          {rows.length===0 && <tr><td colSpan={6} style={{padding:16, color:'#666'}}>No available stock.</td></tr>}
-        </tbody>
-      </table>
-
-      <MySales />
-      <RecordsPanel />
-
-      {sellModal.open && sellModal.account && (
-        <SellModal me={me!} account={sellModal.account} onClose={async ()=>{
-          closeSell(); await load();
-        }} />
-      )}
-    </div>
-  );
-}
-
-function MySales(){
-  const [rows, setRows] = useState<any[]>([]);
-  useEffect(()=>{
-    (async ()=>{
-      const { data: { user } } = await supabase.auth.getUser();
-      if(!user) return;
-      const { data } = await supabase.from('account_sales').select('*').eq('sold_by', user.id).order('sold_at', {ascending:false});
-      setRows(data || []);
-    })();
+  useEffect(() => {
+    fetchAccounts();
   }, []);
-  const total = rows.reduce((s,r)=> s + Number(r.commission), 0);
-  return (
-    <div className="card" style={{marginTop:24}}>
-      <b>My Sales</b>
-      <div style={{fontSize:12, color:'#666', marginTop:4}}>Commission per item = (Price − Capital) × 0.25</div>
-      <table>
-        <thead><tr><th>ID</th><th>Service</th><th>Price</th><th>Capital</th><th>Commission</th><th>Sold at</th></tr></thead>
-        <tbody>
-          {rows.map((r:any)=>(
-            <tr key={r.id}>
-              <td>{r.id}</td>
-              <td>{productLabel(r.service)}</td>
-              <td>₱{Number(r.price).toFixed(2)}</td>
-              <td>₱{Number(r.capital).toFixed(2)}</td>
-              <td><b>₱{Number(r.commission).toFixed(2)}</b></td>
-              <td style={{fontSize:12}}>{r.sold_at ? new Date(r.sold_at).toLocaleString(): '—'}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <div className="row" style={{justifyContent:'space-between', marginTop:8}}>
-        <div>Total Commission</div><div><b>₱{total.toFixed(2)}</b></div>
-      </div>
-    </div>
-  );
-}
 
-function RecordsPanel(){
-  const [rows, setRows] = useState<RecordRow[]>([]);
-  const [form, setForm] = useState({ buyer_username:'', extra_days:0, availed_at: new Date().toISOString().slice(0,16) });
-  // Keep simple manual add (admin-only sees own)
-  useEffect(()=>{ (async ()=>{
-    const { data } = await supabase.from('account_records').select('*').order('id', {ascending:false});
-    setRows(data || []);
-  })(); }, []);
-
-  async function extend(id:number, addDays:number){
-    const target = rows.find(r=>r.id===id); if(!target) return;
-    const { error } = await supabase.from('account_records').update({ extra_days: addDays }).eq('id', id);
-    if (error) return alert(error.message);
-    const { data } = await supabase.from('account_records').select('*').order('id',{ascending:false});
-    setRows(data || []);
-  }
-
-  return (
-    <div className="card" style={{marginTop:24}}>
-      <b>Account Records (Mine)</b>
-      <table style={{marginTop:12}}>
-        <thead>
-          <tr><th>ID</th><th>Product</th><th>Buyer</th><th>Availed</th><th>Duration</th><th>+Days</th><th>Expires</th><th>Actions</th></tr>
-        </thead>
-        <tbody>
-          {rows.map(r=>(
-            <tr key={r.id}>
-              <td>{r.id}</td>
-              <td>{r.product}</td>
-              <td>{r.buyer_username}</td>
-              <td style={{fontSize:12}}>{new Date(r.availed_at).toLocaleString()}</td>
-              <td>{r.duration_days}d</td>
-              <td>{r.extra_days}d</td>
-              <td style={{fontWeight:600}}>{new Date(r.expires_at).toLocaleString()}</td>
-              <td>
-                <button onClick={()=>extend(r.id, r.extra_days + 1)}>+1d</button>
-                <button onClick={()=>extend(r.id, r.extra_days + 7)} style={{marginLeft:6}}>+7d</button>
-              </td>
-            </tr>
-          ))}
-          {rows.length===0 && <tr><td colSpan={8} style={{padding:12, color:'#777'}}>No records yet.</td></tr>}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-function SellModal({ me, account, onClose }:{
-  me:{id:string}, account:Account, onClose:()=>void
-}){
-  const [buyer, setBuyer] = useState('');
-  const [catKey, setCatKey] = useState(CATALOG[0].key);
-  const [prodKey, setProdKey] = useState(account.service); // prefill from account service
-  const [variant, setVariant] = useState('');
-  const [days, setDays] = useState(30);
-  const [availed, setAvailed] = useState(new Date().toISOString().slice(0,16));
-  const cat = useMemo(()=> CATALOG.find(c=>c.key===catKey)!, [catKey]);
-  const prod = useMemo(()=> (cat.products.find(p=>p.key===prodKey) || cat.products[0]), [cat, prodKey]);
-  const choices = useMemo(()=> {
-    const vars = prod?.variants || [];
-    const v = vars.find(v=>v.name===variant) || vars[0];
-    const ex = (v?.tenures || []).flatMap(expandTenureChoices);
-    return {vars, ex};
-  }, [prod, variant]);
-
-  useEffect(()=>{
-    if (prod?.variants?.length) setVariant(prod.variants[0].name);
-  }, [prodKey]);
-
-  useEffect(()=>{
-    if (choices.ex.length) setDays(choices.ex[0].days);
-  }, [variant]);
-
-  async function submit(){
-    if (!buyer.trim()) return alert('Buyer username required');
-    const { error } = await supabase.rpc('sell_account_and_record', {
-      _account_id: account.id,
-      _buyer_username: buyer.trim(),
-      _duration_days: days,
-      _extra_days: 0,
-      _availed_at: new Date(availed).toISOString()
+  function openNew() {
+    setEditing(null);
+    setForm({
+      product: "",
+      plan_type: "",
+      duration_months: 1,
+      price: "",
+      status: "available",
     });
-    if (error) { alert(error.message); return; }
-    onClose();
+    setModalOpen(true);
+  }
+
+  function openEdit(acc: any) {
+    setEditing(acc);
+    setForm({
+      product: acc.product,
+      plan_type: acc.plan_type || "",
+      duration_months: acc.duration_months,
+      price: acc.price,
+      status: acc.status,
+    });
+    setModalOpen(true);
+  }
+
+  async function saveAccount() {
+    const payload = {
+      product: form.product,
+      plan_type: form.plan_type,
+      duration_months: form.duration_months,
+      price: form.price,
+      status: form.status,
+    };
+
+    if (editing) {
+      const { error } = await supabase
+        .from("accounts")
+        .update(payload)
+        .eq("id", editing.id);
+      if (error) alert(error.message);
+    } else {
+      const { error } = await supabase.from("accounts").insert(payload);
+      if (error) alert(error.message);
+    }
+
+    setModalOpen(false);
+    await fetchAccounts();
+  }
+
+  async function markSold(id: number) {
+    const { error } = await supabase
+      .from("accounts")
+      .update({ status: "sold" })
+      .eq("id", id);
+    if (error) alert(error.message);
+    else fetchAccounts();
   }
 
   return (
-    <div className="modal-backdrop">
-      <div className="modal">
-        <header>
-          <b>Sell #{account.id} — {productLabel(account.service)}</b>
-          <button onClick={onClose}>×</button>
-        </header>
-        <div className="row" style={{flexWrap:'wrap', marginBottom:8}}>
-          <input placeholder="Buyer username" value={buyer} onChange={e=>setBuyer(e.target.value)} />
-          <input type="datetime-local" value={availed} onChange={e=>setAvailed(e.target.value)}/>
+    <div className="p-6 max-w-4xl mx-auto">
+      <h1 className="text-2xl font-bold mb-4">📦 Admin Stock Panel</h1>
+
+      <button
+        onClick={openNew}
+        className="bg-green-600 text-white px-4 py-2 rounded mb-4"
+      >
+        ➕ Add New Account
+      </button>
+
+      {loading ? (
+        <p>Loading...</p>
+      ) : (
+        <table className="w-full border">
+          <thead className="bg-gray-100">
+            <tr>
+              <th className="p-2 border">Product</th>
+              <th className="p-2 border">Plan</th>
+              <th className="p-2 border">Duration (mo)</th>
+              <th className="p-2 border">Price</th>
+              <th className="p-2 border">Status</th>
+              <th className="p-2 border">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {accounts.map((acc) => (
+              <tr key={acc.id}>
+                <td className="border p-2">{acc.product}</td>
+                <td className="border p-2">{acc.plan_type || "-"}</td>
+                <td className="border p-2">{acc.duration_months}</td>
+                <td className="border p-2">₱{acc.price}</td>
+                <td
+                  className={`border p-2 font-semibold ${
+                    acc.status === "sold" ? "text-red-600" : "text-green-600"
+                  }`}
+                >
+                  {acc.status}
+                </td>
+                <td className="border p-2 flex gap-2 justify-center">
+                  <button
+                    onClick={() => openEdit(acc)}
+                    className="px-2 py-1 bg-blue-500 text-white rounded"
+                  >
+                    ✏️ Edit
+                  </button>
+                  {acc.status === "available" && (
+                    <button
+                      onClick={() => markSold(acc.id)}
+                      className="px-2 py-1 bg-orange-500 text-white rounded"
+                    >
+                      🏷️ Sold
+                    </button>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+
+      {modalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center">
+          <div className="bg-white p-6 rounded shadow-lg w-80">
+            <h2 className="font-bold mb-2">
+              {editing ? "Edit Account" : "Add Account"}
+            </h2>
+            <input
+              placeholder="Product"
+              className="border w-full mb-2 p-2"
+              value={form.product}
+              onChange={(e) => setForm({ ...form, product: e.target.value })}
+            />
+            <input
+              placeholder="Plan Type"
+              className="border w-full mb-2 p-2"
+              value={form.plan_type}
+              onChange={(e) => setForm({ ...form, plan_type: e.target.value })}
+            />
+            <input
+              type="number"
+              placeholder="Duration (months)"
+              className="border w-full mb-2 p-2"
+              value={form.duration_months}
+              onChange={(e) =>
+                setForm({ ...form, duration_months: Number(e.target.value) })
+              }
+            />
+            <input
+              type="number"
+              placeholder="Price"
+              className="border w-full mb-2 p-2"
+              value={form.price}
+              onChange={(e) =>
+                setForm({ ...form, price: Number(e.target.value) })
+              }
+            />
+            <select
+              className="border w-full mb-4 p-2"
+              value={form.status}
+              onChange={(e) => setForm({ ...form, status: e.target.value })}
+            >
+              <option value="available">Available</option>
+              <option value="sold">Sold</option>
+            </select>
+
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setModalOpen(false)}
+                className="bg-gray-400 px-3 py-1 text-white rounded"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveAccount}
+                className="bg-green-600 px-3 py-1 text-white rounded"
+              >
+                Save
+              </button>
+            </div>
+          </div>
         </div>
-        <div className="row" style={{flexWrap:'wrap', marginBottom:12}}>
-          <select value={catKey} onChange={e=>{ setCatKey(e.target.value); const first=CATALOG.find(c=>c.key===e.target.value)!.products[0]; setProdKey(first.key); }}>
-            {CATALOG.map(c=><option key={c.key} value={c.key}>{c.label}</option>)}
-          </select>
-          <select value={prodKey} onChange={e=>setProdKey(e.target.value)}>
-            {cat.products.map(p=> <option key={p.key} value={p.key}>{p.label}</option>)}
-          </select>
-          <select value={variant} onChange={e=>setVariant(e.target.value)}>
-            {choices.vars.map(v=> <option key={v.name} value={v.name}>{v.name}</option>)}
-          </select>
-          <select value={days} onChange={e=>setDays(parseInt(e.target.value,10))}>
-            {choices.ex.map(tc => <option key={tc.label} value={tc.days}>{tc.label}</option>)}
-          </select>
-        </div>
-        <div className="row" style={{justifyContent:'flex-end'}}>
-          <button onClick={submit}>Confirm Sell & Create Record</button>
-        </div>
-      </div>
+      )}
     </div>
   );
 }
