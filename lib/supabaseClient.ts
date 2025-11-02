@@ -1,9 +1,15 @@
 // lib/supabaseClient.ts
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+// IMPORTANT: set these in Vercel → Settings → Environment Variables
+const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
+// Singleton client for client components
+const supabase: SupabaseClient = createClient(url, anon);
 export default supabase;
+
+// Optional factory if you ever need a fresh instance
+export function createBrowserClient() {
+  return createClient(url, anon);
+}
