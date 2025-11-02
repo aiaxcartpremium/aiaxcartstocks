@@ -1,48 +1,102 @@
 // lib/catalog.ts
+
+// Flat list (kept exactly as you like it)
 export const PRODUCT_OPTIONS: string[] = [
-  // entertainment
-  'netflix — shared profile', 'netflix — solo profile',
-  'viu — shared', 'viu — solo',
-  'vivamax', 'vivaone', 'vivabundle — shared', 'vivabundle — solo',
-  'disney+ — shared profile', 'disney+ — solo profile', 'disney+ — solo acc',
+  // 🎬 entertainment
+  'amazon prime — shared profile', 'amazon prime — solo acc', 'amazon prime — solo profile',
   'bilibili — shared', 'bilibili — solo',
+  'crunchyroll — shared profile', 'crunchyroll — solo acc', 'crunchyroll — solo profile',
+  'disney+ — shared profile', 'disney+ — solo acc', 'disney+ — solo profile',
+  'hbo max — shared profile', 'hbo max — solo acc', 'hbo max — solo profile',
   'iqiyi — shared', 'iqiyi — solo',
-  'weTV — shared', 'weTV — solo',
-  'loklok — shared', 'loklok — solo',
   'iwantTFC — shared', 'iwantTFC — solo',
-  'amazon prime — shared profile', 'amazon prime — solo profile', 'amazon prime — solo acc',
-  'crunchyroll — shared profile', 'crunchyroll — solo profile', 'crunchyroll — solo acc',
-  'hbo max — shared profile', 'hbo max — solo profile', 'hbo max — solo acc',
-  'youku — shared', 'youku — solo',
+  'loklok — shared', 'loklok — solo',
   'nba league pass — shared', 'nba league pass — solo',
+  'netflix — shared profile', 'netflix — solo profile',
+  'vivabundle — shared', 'vivabundle — solo',
+  'vivaone', 'vivamax',
+  'viu — shared', 'viu — solo',
+  'weTV — shared', 'weTV — solo',
+  'youku — shared', 'youku — solo',
 
-  // streaming
-  'spotify — solo',
-  'youtube — invite', 'youtube — individual', 'youtube — famhead',
+  // 🎵 streaming
   'apple music — solo',
+  'spotify — solo',
+  'youtube — famhead', 'youtube — individual', 'youtube — invite',
 
-  // educational
-  'studocu — shared', 'studocu — solo',
-  'scribd — shared', 'scribd — solo',
+  // 📘 educational
+  'camscanner — shared', 'camscanner — solo',
+  'duolingo super — shared', 'duolingo super — solo',
   'grammarly — shared', 'grammarly — solo',
-  'quillbot — shared', 'quillbot — solo',
   'ms365 — invite', 'ms365 — shared', 'ms365 — solo',
   'quizlet+ — shared', 'quizlet+ — solo',
-  'camscanner — shared', 'camscanner — solo',
+  'quillbot — shared', 'quillbot — solo',
+  'scribd — shared', 'scribd — solo',
   'smallpdf — shared', 'smallpdf — solo',
-  'turnitin student — shared', 'turnitin student — solo',
+  'studocu — shared', 'studocu — solo',
   'turnitin instructor — shared', 'turnitin instructor — solo',
-  'duolingo super — shared', 'duolingo super — solo',
+  'turnitin student — shared', 'turnitin student — solo',
 
-  // editing
-  'canva — invite', 'canva — personal', 'canva — teamhead', 'canva — edu lifetime',
-  'picsart — shared', 'picsart — solo', 'picsart — teamhead',
-  'capcut — shared', 'capcut — solo (+7 days option)',
-  'remini web — shared', 'remini web — solo',
+  // 🎨 editing
   'alight motion — shared', 'alight motion — solo',
+  'canva — edu lifetime', 'canva — invite', 'canva — personal', 'canva — teamhead',
+  'capcut — shared', 'capcut — solo (+7 days option)',
+  'picsart — shared', 'picsart — solo', 'picsart — teamhead',
+  'remini web — shared', 'remini web — solo',
 
-  // ai
+  // 🤖 ai
   'chatgpt — shared', 'chatgpt — solo',
   'gemini ai — shared', 'gemini ai — solo',
   'perplexity — solo',
 ];
+
+// Grouped version for <optgroup> (kept in the same order as above)
+export const PRODUCT_CATEGORIES: Record<string, string[]> = {
+  '🎬 entertainment': [
+    'amazon prime — shared profile', 'amazon prime — solo acc', 'amazon prime — solo profile',
+    'bilibili — shared', 'bilibili — solo',
+    'crunchyroll — shared profile', 'crunchyroll — solo acc', 'crunchyroll — solo profile',
+    'disney+ — shared profile', 'disney+ — solo acc', 'disney+ — solo profile',
+    'hbo max — shared profile', 'hbo max — solo acc', 'hbo max — solo profile',
+    'iqiyi — shared', 'iqiyi — solo',
+    'iwantTFC — shared', 'iwantTFC — solo',
+    'loklok — shared', 'loklok — solo',
+    'nba league pass — shared', 'nba league pass — solo',
+    'netflix — shared profile', 'netflix — solo profile',
+    'vivabundle — shared', 'vivabundle — solo',
+    'vivaone', 'vivamax',
+    'viu — shared', 'viu — solo',
+    'weTV — shared', 'weTV — solo',
+    'youku — shared', 'youku — solo',
+  ],
+  '🎵 streaming': [
+    'apple music — solo',
+    'spotify — solo',
+    'youtube — famhead', 'youtube — individual', 'youtube — invite',
+  ],
+  '📘 educational': [
+    'camscanner — shared', 'camscanner — solo',
+    'duolingo super — shared', 'duolingo super — solo',
+    'grammarly — shared', 'grammarly — solo',
+    'ms365 — invite', 'ms365 — shared', 'ms365 — solo',
+    'quizlet+ — shared', 'quizlet+ — solo',
+    'quillbot — shared', 'quillbot — solo',
+    'scribd — shared', 'scribd — solo',
+    'smallpdf — shared', 'smallpdf — solo',
+    'studocu — shared', 'studocu — solo',
+    'turnitin instructor — shared', 'turnitin instructor — solo',
+    'turnitin student — shared', 'turnitin student — solo',
+  ],
+  '🎨 editing': [
+    'alight motion — shared', 'alight motion — solo',
+    'canva — edu lifetime', 'canva — invite', 'canva — personal', 'canva — teamhead',
+    'capcut — shared', 'capcut — solo (+7 days option)',
+    'picsart — shared', 'picsart — solo', 'picsart — teamhead',
+    'remini web — shared', 'remini web — solo',
+  ],
+  '🤖 ai': [
+    'chatgpt — shared', 'chatgpt — solo',
+    'gemini ai — shared', 'gemini ai — solo',
+    'perplexity — solo',
+  ],
+};
