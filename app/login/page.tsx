@@ -1,38 +1,74 @@
 'use client';
-
-import { useFormStatus } from 'react-dom';
-import { loginAsAdmin, loginAsOwner } from './actions';
-
-function SubmitBtn({ children }: { children: React.ReactNode }) {
-  // @ts-expect-error: using experimental hook for simple pending state
-  const { pending } = useFormStatus?.() ?? { pending: false };
-  return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="w-full rounded border px-4 py-2 text-base font-medium hover:bg-neutral-100 disabled:opacity-60"
-    >
-      {pending ? 'Signing in…' : children}
-    </button>
-  );
-}
+import { useState } from 'react';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
+  const supabase = createClientComponentClient();
+  const router = useRouter();
+
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  async function handleLogin(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    setLoading(false);
+
+    if (error) {
+      setError('Invalid credentials');
+    } else {
+      router.push('/admin');
+    }
+  }
+
   return (
-    <div className="min-h-[70vh] flex items-center justify-center p-6">
-      <div className="w-full max-w-sm border rounded-lg p-6">
-        <h1 className="text-2xl font-bold mb-4 text-center">Choose Login</h1>
+    <div className="flex justify-center items-center min-h-screen bg-gray-50">
+      <form
+        onSubmit={handleLogin}
+        className="bg-white shadow-md rounded-lg px-6 py-8 w-full max-w-sm"
+      >
+        <h1 className="text-xl font-semibold text-center mb-4">Admin Login</h1>
 
-        <form action={loginAsAdmin} className="mb-3">
-          <SubmitBtn>Login as Admin</SubmitBtn>
-        </form>
+        <input
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="border rounded-md w-full p-2 mb-3"
+          required
+        />
 
-        <form action={loginAsOwner}>
-          <SubmitBtn>Login as Owner</SubmitBtn>
-        </form>
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className="border rounded-md w-full p-2 mb-3"
+          required
+        />
 
-        {/* No tips / no supabase CLI text */}
-      </div>
+        {error && (
+          <p className="text-red-500 text-sm text-center mb-3">{error}</p>
+        )}
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="bg-blue-500 text-white font-semibold py-2 rounded-md w-full disabled:opacity-60"
+        >
+          {loading ? 'Signing in...' : 'Sign in'}
+        </button>
+      </form>
     </div>
   );
 }
