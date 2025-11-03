@@ -1,22 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // ✅ Ignore TypeScript build errors (safe for deployment testing)
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-
-  // ✅ Ignore ESLint errors during build
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-
-  // ✅ Optional: enable faster builds on Vercel
-  experimental: {
-    optimizeCss: true,
-    serverActions: {
-      allowedOrigins: ['*'],
-    },
-  },
+  reactStrictMode: true,
+  // Huwag muna gamitin optimizeCss para iwas 'critters' error
+  experimental: {},
+  // important: huwag gumamit ng `output: 'export'`
+  // kailangan natin ng default server output dahil may Supabase/auth
 };
-
 export default nextConfig;
