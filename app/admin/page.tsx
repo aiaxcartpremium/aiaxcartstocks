@@ -1,15 +1,13 @@
 'use client';
 
-'use client';
-
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabaseClient';
-import type { Stock, Category } from '@/lib/types';
-import { PRODUCT_CATEGORIES } from '@/lib/catalog';
-import LogoutButton from '@/components/LogoutButton';
-export default function AdminPage() {
-  const router = useRouter();
+
+// ✅ use the singleton and RELATIVE paths only
+import { supabase } from '../../lib/supabaseClient';
+import type { Stock, Category } from '../../lib/types';
+import { PRODUCT_CATEGORIES } from '../../lib/catalog';
+import LogoutButton from '../../components/LogoutButton';
 
   const [role, setRole] = useState<'owner' | 'admin' | null>(null);
   const [rows, setRows] = useState<Stock[]>([]);
