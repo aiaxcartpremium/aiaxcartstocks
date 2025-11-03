@@ -1,15 +1,16 @@
 'use client';
 
+'use client';
+
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '../../lib/supabaseClient';
+import { supabase } from '@/lib/supabaseClient';
 import {
   PRODUCT_CATEGORIES,
   PRODUCT_OPTIONS,
   type ProductCategory
-} from '../../lib/catalog';
-import LogoutButton from '../../components/LogoutButton';
-type Role = 'owner' | 'admin' | 'user' | null;
+} from '@/lib/catalog';
+import LogoutButton from '@/components/LogoutButton';type Role = 'owner' | 'admin' | 'user' | null;
 
 type Profile = { id: string; email?: string; role: Role };
 
