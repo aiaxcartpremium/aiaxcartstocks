@@ -68,10 +68,18 @@ export default function AdminPage() {
       <p className="mb-6 text-sm">Total rows: {total} • Available: {available}</p>
 
       <div className="flex flex-wrap gap-2 mb-4">
-        <select className="border rounded px-2 py-1 text-sm" value={category} onChange={(e)=>setCategory(e.target.value as any)}>
-          <option value="all">All categories</option>
-          {PRODUCT_CATEGORIES.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
-        </select>
+        <select
+  className="border rounded px-2 py-1 text-sm"
+  value={category}
+  onChange={(e) => setCategory(e.target.value as any)}
+>
+  <option value="all">All categories</option>
+  {PRODUCT_CATEGORIES.map((c: Category) => (
+    <option key={c} value={c}>
+      {c.charAt(0).toUpperCase() + c.slice(1)}
+    </option>
+  ))}
+</select>
         <select className="border rounded px-2 py-1 text-sm" value={status} onChange={(e)=>setStatus(e.target.value as any)}>
           <option value="all">All status</option>
           <option value="available">Available</option>
