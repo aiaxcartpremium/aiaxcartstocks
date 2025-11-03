@@ -1,74 +1,73 @@
+// /app/login/page.tsx
 'use client';
+
 import { useState } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabaseClient';
 
 export default function LoginPage() {
-  const supabase = createClientComponentClient();
   const router = useRouter();
-
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [mode, setMode] = useState<'admin' | 'owner' | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [err, setErr] = useState<string | null>(null);
 
-  async function handleLogin(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
+  async function handleLogin() {
+    try {
+      setLoading(true);
+      setErr(null);
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+      if (!mode) { setErr('Piliin muna: Admin or Owner'); return; }
 
-    setLoading(false);
+      const email = mode === 'admin'
+        ? process.env.NEXT_PUBLIC_LOGIN_ADMIN_EMAIL ?? process.env.LOGIN_ADMIN_EMAIL
+        : process.env.NEXT_PUBLIC_LOGIN_OWNER_EMAIL ?? process.env.LOGIN_OWNER_EMAIL;
 
-    if (error) {
-      setError('Invalid credentials');
-    } else {
-      router.push('/admin');
+      const password = mode === 'admin'
+        ? process.env.NEXT_PUBLIC_LOGIN_ADMIN_PASSWORD ?? process.env.LOGIN_ADMIN_PASSWORD
+        : process.env.NEXT_PUBLIC_LOGIN_OWNER_PASSWORD ?? process.env.LOGIN_OWNER_PASSWORD;
+
+      if (!email || !password) {
+        setErr('Missing login env vars. Add them in Vercel: LOGIN_ADMIN_EMAIL/PASSWORD and LOGIN_OWNER_EMAIL/PASSWORD.');
+        return;
+      }
+
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) { setErr(error.message); return; }
+
+      router.replace(mode === 'admin' ? '/admin' : '/owner');
+    } finally {
+      setLoading(false);
     }
   }
 
   return (
-    <div className="flex justify-center items-center min-h-screen bg-gray-50">
-      <form
-        onSubmit={handleLogin}
-        className="bg-white shadow-md rounded-lg px-6 py-8 w-full max-w-sm"
-      >
-        <h1 className="text-xl font-semibold text-center mb-4">Admin Login</h1>
+    <main className="max-w-md mx-auto p-6">
+      <h1 className="text-2xl font-bold mb-6">Sign in</h1>
 
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="border rounded-md w-full p-2 mb-3"
-          required
-        />
-
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="border rounded-md w-full p-2 mb-3"
-          required
-        />
-
-        {error && (
-          <p className="text-red-500 text-sm text-center mb-3">{error}</p>
-        )}
-
+      <div className="flex gap-2 mb-4">
         <button
-          type="submit"
-          disabled={loading}
-          className="bg-blue-500 text-white font-semibold py-2 rounded-md w-full disabled:opacity-60"
+          onClick={() => setMode('admin')}
+          className={`border rounded px-3 py-2 ${mode === 'admin' ? 'bg-black text-white' : ''}`}
         >
-          {loading ? 'Signing in...' : 'Sign in'}
+          Admin
         </button>
-      </form>
-    </div>
+        <button
+          onClick={() => setMode('owner')}
+          className={`border rounded px-3 py-2 ${mode === 'owner' ? 'bg-black text-white' : ''}`}
+        >
+          Owner
+        </button>
+      </div>
+
+      <button
+        onClick={handleLogin}
+        disabled={!mode || loading}
+        className="w-full border rounded px-3 py-2 disabled:opacity-50"
+      >
+        {loading ? 'Signing in…' : (mode ? `Sign in as ${mode}` : 'Choose a role')}
+      </button>
+
+      {err && <p className="mt-3 text-red-600 text-sm">{err}</p>}
+    </main>
   );
 }
